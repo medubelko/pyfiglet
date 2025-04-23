@@ -58,9 +58,9 @@ COLOR_CODES = {'BLACK': 30, 'RED': 31, 'GREEN': 32, 'YELLOW': 33, 'BLUE': 34, 'M
 RESET_COLORS = b'\033[0m'
 
 if sys.platform == 'win32':
-    SHARED_DIRECTORY = os.path.join(os.environ["APPDATA"], "pyfiglet")
+    FONT_DIRECTORY = os.path.join(os.environ["APPDATA"], "pyfiglet")
 else:
-    SHARED_DIRECTORY = '/usr/local/share/pyfiglet/'
+    FONT_DIRECTORY = os.path.expanduser('~/.local/share/pyfiglet/fonts')
 
 
 def figlet_format(text, font=DEFAULT_FONT, **kwargs):
@@ -143,7 +143,7 @@ class FigletFont(object):
                 font_path = path
                 break
             else:
-                for location in ("./", SHARED_DIRECTORY):
+                for location in ("./", FONT_DIRECTORY):
                     full_name = os.path.join(location, fn)
                     if os.path.isfile(full_name):
                         font_path = pathlib.Path(full_name)
@@ -172,7 +172,7 @@ class FigletFont(object):
         if not font.endswith(('.flf', '.tlf')):
             return False
         f = None
-        full_file = os.path.join(SHARED_DIRECTORY, font)
+        full_file = os.path.join(FONT_DIRECTORY, font)
         if os.path.isfile(font):
             f = open(font, 'rb')
         elif os.path.isfile(full_file):
@@ -197,8 +197,8 @@ class FigletFont(object):
     @classmethod
     def getFonts(cls):
         all_files = importlib.resources.files('pyfiglet.fonts').iterdir()
-        if os.path.isdir(SHARED_DIRECTORY):
-             all_files = itertools.chain(all_files, pathlib.Path(SHARED_DIRECTORY).iterdir())
+        if os.path.isdir(FONT_DIRECTORY):
+             all_files = itertools.chain(all_files, pathlib.Path(FONT_DIRECTORY).iterdir())
         return [font.name.split('.', 2)[0] for font
                 in all_files
                 if font.is_file() and cls.isValidFont(font.name)]
@@ -229,12 +229,19 @@ class FigletFont(object):
         """
         Install the specified font file to this system.
         """
-        if hasattr(importlib.resources.files('pyfiglet'), 'resolve'):
+
+        containers = [
+            os.environ.get("container", False), # Flatpak
+            os.environ.get("APPIMAGE", False),
+            os.environ.get("SNAP", False),
+        ]
+
+        if hasattr(importlib.resources.files('pyfiglet'), 'resolve') and not any( containers):
             # Figlet looks like a standard directory - so lets use that to install new fonts.
             location = str(importlib.resources.files('pyfiglet.fonts'))
         else:
             # Figlet is installed using a zipped resource - don't try to upload to it.
-            location = SHARED_DIRECTORY
+            location = FONT_DIRECTORY
 
         print("Installing {} to {}".format(file_name, location))
 

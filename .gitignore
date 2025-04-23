@@ -5,3 +5,6 @@
 /dist/
 /pyfiglet.egg-info/
 env*/
+
+snap/
+*.snap
